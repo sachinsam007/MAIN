@@ -1,0 +1,600 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Shfin EMI Calculator</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #f0f4f8;
+    --card: #ffffff;
+    --card2: #f5f8fb;
+    --accent: #0099cc;
+    --accent2: #006fa6;
+    --text: #1a2636;
+    --muted: #7a90a8;
+    --border: #d6e2ee;
+    --red: #e03355;
+    --gold: #d4a800;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Mono', monospace;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 40px 16px;
+    background-image: 
+      radial-gradient(ellipse at 20% 0%, rgba(0,153,204,0.07) 0%, transparent 50%),
+      radial-gradient(ellipse at 80% 100%, rgba(0,111,166,0.07) 0%, transparent 50%);
+  }
+
+  header {
+    text-align: center;
+    margin-bottom: 40px;
+  }
+
+  header h1 {
+    font-family: 'Syne', sans-serif;
+    font-size: clamp(2rem, 5vw, 3.2rem);
+    font-weight: 800;
+    letter-spacing: -1px;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  header p {
+    color: var(--muted);
+    margin-top: 8px;
+    font-size: 0.82rem;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+  }
+
+  .calculator {
+    width: 100%;
+    max-width: 740px;
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+  }
+
+  .card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 28px;
+    position: relative;
+    overflow: hidden;
+    box-shadow: 0 2px 16px rgba(0,80,140,0.07);
+  }
+
+  .card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, var(--accent), var(--accent2));
+  }
+
+  .card-title {
+    font-family: 'Syne', sans-serif;
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 24px;
+  }
+
+  .grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+  }
+
+  @media (max-width: 520px) {
+    .grid { grid-template-columns: 1fr; }
+  }
+
+  .field {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .field.full { grid-column: 1 / -1; }
+
+  label {
+    font-size: 0.72rem;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+
+  .input-wrap {
+    position: relative;
+    display: flex;
+    align-items: center;
+  }
+
+  .prefix {
+    position: absolute;
+    left: 14px;
+    font-size: 0.9rem;
+    color: var(--accent);
+    font-weight: 500;
+    pointer-events: none;
+  }
+
+  .suffix {
+    position: absolute;
+    right: 14px;
+    font-size: 0.78rem;
+    color: var(--muted);
+    pointer-events: none;
+  }
+
+  input, select {
+    width: 100%;
+    background: var(--card2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 13px 14px;
+    color: var(--text);
+    font-family: 'DM Mono', monospace;
+    font-size: 0.95rem;
+    outline: none;
+    transition: border-color 0.2s, box-shadow 0.2s;
+    -webkit-appearance: none;
+  }
+
+  input[type="number"]::-webkit-inner-spin-button { display: none; }
+
+  .has-prefix input { padding-left: 30px; }
+  .has-suffix input { padding-right: 52px; }
+
+  input:focus, select:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(0,153,204,0.12);
+  }
+
+  input:disabled, select:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+
+  input.auto-filled {
+    border-color: rgba(0,153,204,0.4);
+    color: var(--accent);
+  }
+
+  select {
+    cursor: pointer;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%237a90a8' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 14px center;
+    padding-right: 36px;
+  }
+
+  select option { background: var(--card); color: var(--text); }
+
+  .locked-field input {
+    background: rgba(0,153,204,0.06);
+  }
+
+  /* Result card */
+  .result-card {
+    background: linear-gradient(135deg, #e8f4fb 0%, #ddeef8 100%);
+    border: 1px solid rgba(0,153,204,0.25);
+    border-radius: 16px;
+    padding: 32px 28px;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+    transition: all 0.4s ease;
+  }
+
+  .result-card::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(ellipse at 50% 0%, rgba(0,153,204,0.08) 0%, transparent 60%);
+    pointer-events: none;
+  }
+
+  .result-card.active {
+    border-color: var(--accent);
+    box-shadow: 0 0 40px rgba(0,153,204,0.15);
+  }
+
+  .emi-label {
+    font-family: 'Syne', sans-serif;
+    font-size: 0.72rem;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 12px;
+  }
+
+  .emi-amount {
+    font-family: 'Syne', sans-serif;
+    font-size: clamp(2.5rem, 8vw, 4rem);
+    font-weight: 800;
+    color: var(--accent);
+    line-height: 1;
+    letter-spacing: -2px;
+    transition: all 0.3s ease;
+  }
+
+  .emi-amount .rupee { font-size: 0.6em; vertical-align: top; margin-top: 8px; display: inline-block; }
+
+  .emi-placeholder {
+    font-family: 'Syne', sans-serif;
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--muted);
+  }
+
+  .emi-meta {
+    margin-top: 20px;
+    display: flex;
+    justify-content: center;
+    gap: 32px;
+    flex-wrap: wrap;
+  }
+
+  .meta-item {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    align-items: center;
+  }
+
+  .meta-val {
+    font-size: 1rem;
+    font-weight: 500;
+    color: var(--text);
+  }
+
+  .meta-lbl {
+    font-size: 0.65rem;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+
+  .divider {
+    width: 1px;
+    height: 40px;
+    background: var(--border);
+    align-self: center;
+  }
+
+  /* breakdown */
+  .breakdown {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin-top: 20px;
+  }
+
+  @media (max-width: 520px) {
+    .breakdown { grid-template-columns: 1fr; }
+  }
+
+  .breakdown-item {
+    background: var(--card2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 14px 16px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .breakdown-item .b-label {
+    font-size: 0.72rem;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+
+  .breakdown-item .b-val {
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: var(--text);
+  }
+
+  .tag {
+    display: inline-block;
+    background: rgba(0,153,204,0.12);
+    color: var(--accent);
+    border-radius: 6px;
+    padding: 3px 8px;
+    font-size: 0.7rem;
+    letter-spacing: 1px;
+  }
+
+  .reset-btn {
+    width: 100%;
+    background: transparent;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 14px;
+    color: var(--muted);
+    font-family: 'DM Mono', monospace;
+    font-size: 0.8rem;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: all 0.2s;
+    margin-top: 8px;
+  }
+
+  .reset-btn:hover {
+    border-color: var(--red);
+    color: var(--red);
+    background: rgba(255,77,109,0.05);
+  }
+
+  @keyframes pop {
+    0% { transform: scale(0.95); opacity: 0; }
+    100% { transform: scale(1); opacity: 1; }
+  }
+
+  .animate-pop { animation: pop 0.3s ease forwards; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Shfin EMI Calculator</h1>
+  <p>Vehicle Loan &mdash; Instant Breakdown</p>
+</header>
+
+<div class="calculator">
+
+  <!-- Step 1: Vehicle & Payment -->
+  <div class="card">
+    <div class="card-title">01 &mdash; Vehicle & Payment Details</div>
+    <div class="grid">
+
+      <div class="field">
+        <label>On Road Price</label>
+        <div class="input-wrap has-prefix">
+          <span class="prefix">₹</span>
+          <input type="number" id="onRoad" placeholder="0" oninput="calculate()" />
+        </div>
+      </div>
+
+      <div class="field">
+        <label>Down Payment</label>
+        <div class="input-wrap has-prefix">
+          <span class="prefix">₹</span>
+          <input type="number" id="downPayment" placeholder="0" oninput="calculate()" />
+        </div>
+      </div>
+
+      <div class="field">
+        <label>Disbursement <span class="tag">Auto</span></label>
+        <div class="input-wrap has-prefix locked-field">
+          <span class="prefix">₹</span>
+          <input type="number" id="disbursement" placeholder="0" disabled class="auto-filled" />
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Step 2: Charges -->
+  <div class="card">
+    <div class="card-title">02 &mdash; Charges & Fees</div>
+    <div class="grid">
+
+      <div class="field">
+        <label>PF % (Processing Fee)</label>
+        <div class="input-wrap has-suffix">
+          <input type="number" id="pf" value="3.54" step="0.01" oninput="calculate()" />
+          <span class="suffix">%</span>
+        </div>
+      </div>
+
+      <div class="field">
+        <label>DC % (Documentation)</label>
+        <div class="input-wrap has-suffix">
+          <input type="number" id="dc" value="4" step="0.01" oninput="calculate()" />
+          <span class="suffix">%</span>
+        </div>
+      </div>
+
+      <div class="field">
+        <label>Service Charge</label>
+        <div class="input-wrap has-prefix">
+          <span class="prefix">₹</span>
+          <input type="number" id="serviceCharge" value="800" oninput="calculate()" />
+        </div>
+      </div>
+
+      <div class="field">
+        <label>Loan Amount <span class="tag">Auto</span></label>
+        <div class="input-wrap has-prefix locked-field">
+          <span class="prefix">₹</span>
+          <input type="number" id="loanAmount" placeholder="0" disabled class="auto-filled" />
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Step 3: Loan Terms -->
+  <div class="card">
+    <div class="card-title">03 &mdash; Loan Terms</div>
+    <div class="grid">
+
+      <div class="field">
+        <label>Rate of Interest (Flat)</label>
+        <select id="roi" onchange="calculate()">
+          <option value="">— Select ROI —</option>
+          <option value="9.75">9.75% p.a.</option>
+          <option value="10.75">10.75% p.a.</option>
+          <option value="12.75">12.75% p.a.</option>
+          <option value="13.75">13.75% p.a.</option>
+          <option value="15">15% p.a.</option>
+        </select>
+      </div>
+
+      <div class="field">
+        <label>Tenure</label>
+        <select id="tenure" onchange="calculate()">
+          <option value="">— Select —</option>
+          <option value="12">12 Months</option>
+          <option value="18">18 Months</option>
+          <option value="24">24 Months</option>
+          <option value="30">30 Months</option>
+          <option value="36">36 Months</option>
+          <option value="42">42 Months</option>
+          <option value="48">48 Months</option>
+        </select>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- EMI Result -->
+  <div class="result-card" id="resultCard">
+    <div class="emi-label">Monthly EMI</div>
+    <div id="emiDisplay">
+      <div class="emi-placeholder">Enter loan details above</div>
+    </div>
+
+    <div id="extraInfo" style="display:none">
+      <div class="emi-meta">
+        <div class="meta-item">
+          <span class="meta-val" id="totalPayable">—</span>
+          <span class="meta-lbl">Total Payable</span>
+        </div>
+        <div class="divider"></div>
+        <div class="meta-item">
+          <span class="meta-val" id="totalInterest">—</span>
+          <span class="meta-lbl">Total Interest</span>
+        </div>
+        <div class="divider"></div>
+        <div class="meta-item">
+          <span class="meta-val" id="tenureDisplay">—</span>
+          <span class="meta-lbl">Tenure</span>
+        </div>
+      </div>
+
+      <div class="breakdown">
+        <div class="breakdown-item">
+          <span class="b-label">Disbursement</span>
+          <span class="b-val" id="b-disb">—</span>
+        </div>
+        <div class="breakdown-item">
+          <span class="b-label">PF Amount</span>
+          <span class="b-val" id="b-pf">—</span>
+        </div>
+        <div class="breakdown-item">
+          <span class="b-label">DC Amount</span>
+          <span class="b-val" id="b-dc">—</span>
+        </div>
+        <div class="breakdown-item">
+          <span class="b-label">Service Charge</span>
+          <span class="b-val" id="b-sc">—</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <button class="reset-btn" onclick="resetAll()">↺ &nbsp; Reset Calculator</button>
+
+</div>
+
+<script>
+  const fmt = (n) => '₹' + Math.round(n).toLocaleString('en-IN');
+
+  function calculate() {
+    const onRoad = parseFloat(document.getElementById('onRoad').value) || 0;
+    const downPayment = parseFloat(document.getElementById('downPayment').value) || 0;
+    const pf = parseFloat(document.getElementById('pf').value) || 0;
+    const dc = parseFloat(document.getElementById('dc').value) || 0;
+    const sc = parseFloat(document.getElementById('serviceCharge').value) || 0;
+    const roi = parseFloat(document.getElementById('roi').value) || 0;    const tenure = parseInt(document.getElementById('tenure').value) || 0;
+
+    // Disbursement = On Road - Down Payment
+    const disbursement = onRoad - downPayment;
+    document.getElementById('disbursement').value = disbursement > 0 ? Math.round(disbursement) : '';
+
+    // Loan Amount = Disbursement + PF + DC + SC
+    const pfAmt = disbursement * (pf / 100);
+    const dcAmt = disbursement * (dc / 100);
+    const loanAmount = disbursement + pfAmt + dcAmt + sc;
+    document.getElementById('loanAmount').value = disbursement > 0 ? Math.round(loanAmount) : '';
+
+    // Update breakdown
+    document.getElementById('b-disb').textContent = disbursement > 0 ? fmt(disbursement) : '—';
+    document.getElementById('b-pf').textContent = disbursement > 0 ? fmt(pfAmt) : '—';
+    document.getElementById('b-dc').textContent = disbursement > 0 ? fmt(dcAmt) : '—';
+    document.getElementById('b-sc').textContent = sc > 0 ? fmt(sc) : '—';
+
+    // EMI calculation
+    const resultCard = document.getElementById('resultCard');
+    const emiDisplay = document.getElementById('emiDisplay');
+    const extraInfo = document.getElementById('extraInfo');
+
+    if (loanAmount > 0 && roi > 0 && tenure > 0) {
+      // Flat rate EMI = (Principal + Total Interest) / Tenure
+      // Total Interest = Principal * flat rate% * (tenure in years)
+      const tenureYears = tenure / 12;
+      const totalInterest = loanAmount * (roi / 100) * tenureYears;
+      const totalPayable = loanAmount + totalInterest;
+      const emi = totalPayable / tenure;
+
+      emiDisplay.innerHTML = `
+        <div class="emi-amount animate-pop">
+          <span class="rupee">₹</span>${Math.round(emi).toLocaleString('en-IN')}
+        </div>`;
+      
+      document.getElementById('totalPayable').textContent = fmt(totalPayable);
+      document.getElementById('totalInterest').textContent = fmt(totalInterest);
+      document.getElementById('tenureDisplay').textContent = tenure + ' mo';
+      
+      extraInfo.style.display = 'block';
+      resultCard.classList.add('active');
+    } else {
+      emiDisplay.innerHTML = `<div class="emi-placeholder">${
+        disbursement <= 0 ? 'Enter On Road & Down Payment' :
+        !roi ? 'Select Rate of Interest' :
+        !tenure ? 'Select Tenure' : 'Enter loan details above'
+      }</div>`;
+      extraInfo.style.display = 'none';
+      resultCard.classList.remove('active');
+    }
+  }
+
+  function resetAll() {
+    ['onRoad','downPayment'].forEach(id => document.getElementById(id).value = '');
+    document.getElementById('roi').value = '';
+    document.getElementById('pf').value = '3.54';
+    document.getElementById('dc').value = '4';
+    document.getElementById('serviceCharge').value = '800';
+    document.getElementById('tenure').value = '';
+    document.getElementById('disbursement').value = '';
+    document.getElementById('loanAmount').value = '';
+    document.getElementById('emiDisplay').innerHTML = '<div class="emi-placeholder">Enter loan details above</div>';
+    document.getElementById('extraInfo').style.display = 'none';
+    document.getElementById('resultCard').classList.remove('active');
+    ['b-disb','b-pf','b-dc','b-sc','totalPayable','totalInterest','tenureDisplay']
+      .forEach(id => document.getElementById(id).textContent = '—');
+  }
+</script>
+</body>
+</html>
